@@ -1,9 +1,9 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { ContactForm } from './ContactForm/ContactForm';
 import { ContactList } from './ContactList/ContactList';
 import { Filter } from './Filter/Filter';
 import { AppWrapper, TitleApp, TitleContacts } from './app.styled';
-import { load, save } from 'utils/localStorage';
+import { load } from 'utils/localStorage';
 
 const initialState = [
   { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
@@ -12,33 +12,24 @@ const initialState = [
   { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
 ];
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState(
+    () => load('contacts') ?? initialState
+  );
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    const data = load('contacts') ?? initialState;
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-    this.setState({ contacts: data });
-  }
-
-  componentDidUpdate(_, prevState) {
-    const { contacts } = this.state;
-    if (contacts !== prevState.contacts) {
-      save('contacts', contacts);
-    }
-  }
-
-  addContact = (name, number) => {
+  const addContact = (name, number) => {
     const contact = {
       name,
       number,
       id: crypto.randomUUID(),
     };
 
-    const isExist = this.state.contacts.find(
+    const isExist = contacts.find(
       elem => elem.name.toLowerCase() === name.toLowerCase()
     );
     if (isExist) {
@@ -46,55 +37,47 @@ export class App extends Component {
       return;
     }
 
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, contact],
-    }));
+    setContacts(prev => [...prev, contact]);
   };
 
-  countTotalContacts = () => {
-    return this.state.contacts.length;
+  const countTotalContacts = () => {
+    return contacts.length;
   };
 
-  onFilterChange = e => {
-    this.setState({ filter: e.target.value });
+  const onFilterChange = e => {
+    setFilter(e.target.value);
   };
 
-  getFilteredContact = () => {
-    const { contacts, filter } = this.state;
-
+  const getFilteredContact = () => {
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(filter.toLowerCase().trim())
     );
   };
 
-  deleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const deleteContact = id => {
+    setContacts(prev => prev.filter(contact => contact.id !== id));
   };
 
-  render() {
-    const filteredContacts = this.getFilteredContact();
-    const total = this.countTotalContacts();
+  const filteredContacts = getFilteredContact();
+  const total = countTotalContacts();
 
-    return (
-      <AppWrapper>
-        <TitleApp>Phonebook</TitleApp>
-        <ContactForm onSubmit={this.addContact} />
-        <TitleContacts>Contacts</TitleContacts>
+  return (
+    <AppWrapper>
+      <TitleApp>Phonebook</TitleApp>
+      <ContactForm onSubmit={addContact} />
+      <TitleContacts>Contacts</TitleContacts>
 
-        {total === 0 ? (
-          'There is no contacts in your phonebook!'
-        ) : (
-          <>
-            <Filter filter={this.state.filter} onFilter={this.onFilterChange} />
-            <ContactList
-              contacts={filteredContacts}
-              deleteContact={this.deleteContact}
-            />
-          </>
-        )}
-      </AppWrapper>
-    );
-  }
-}
+      {total === 0 ? (
+        'There is no contacts in your phonebook!'
+      ) : (
+        <>
+          <Filter filter={filter} onFilter={onFilterChange} />
+          <ContactList
+            contacts={filteredContacts}
+            deleteContact={deleteContact}
+          />
+        </>
+      )}
+    </AppWrapper>
+  );
+};
